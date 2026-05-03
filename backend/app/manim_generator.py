@@ -1,5 +1,5 @@
-import math
-from collections.abc import Callable
+
+from pathlib import Path
 from typing import Any
 
 from manim import *
@@ -141,7 +141,7 @@ class ParametricCurveScene(ThreeDScene):
         
         t_dot_group.add_updater(update_t_dot, call_updater=True)
 
-        num_curves_per_submobject = 5
+        num_curves_per_submobject = 8
         t_values = np.linspace(self.a, self.b, num_curves_per_submobject * self.num_curve_mobjects + 1)
         f_values = np.array([self.f(t) for t in t_values])
         min_point = np.min(f_values, axis=0)
@@ -228,10 +228,10 @@ class ParametricCurveScene(ThreeDScene):
         self.wait()
 
 
-def main() -> None:
-    f_tex = r"\cos(t), \sin(t), \frac{t}{2\pi}"
-    a_tex = r"0"
-    b_tex = r"3\pi"
+def render_scene(f_tex: str, a_tex: str, b_tex: str) -> None:
+    # f_tex = r"\cos(t), \sin(t), \frac{t}{2\pi}"
+    # a_tex = r"0"
+    # b_tex = r"3\pi"
     # f_tex = input("Ingrese una función sobre la variable t en formato LaTeX:\n")
     # a_tex = input("Ingrese límite inferior: ")
     # b_tex = input("Ingrese límite superior: ")
@@ -246,11 +246,18 @@ def main() -> None:
             for symbol in symbols:
                 cleaned_texes[i] = cleaned_texes[i].replace(symbol, replacement)
     
-    output_filename = f"f(t) = {cleaned_texes[0]}, t in [{cleaned_texes[1]}, {cleaned_texes[2]}]"
+    output_filename = f"curve_{cleaned_texes[0]}_[{cleaned_texes[1]},{cleaned_texes[2]}]"
 
-    with tempconfig({"quality": "medium_quality", "output_file": output_filename}):
-        ParametricCurveScene(f_tex, a_tex, b_tex).render()
+    if not Path(f"/manim/media/videos/720p30/{output_filename}.mp4").exists():
+        with tempconfig({"quality": "medium_quality", "output_file": output_filename}):
+            ParametricCurveScene(f_tex, a_tex, b_tex).render()
+
+    return f"/videos/{output_filename}.mp4"
 
 
 if __name__ == "__main__":
-    main()
+    render_scene(
+        r"\cos(t), \sin(t), \frac{t}{2\pi}",
+        r"0",
+        r"3\pi",
+    )
