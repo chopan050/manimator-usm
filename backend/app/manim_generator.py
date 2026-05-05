@@ -236,6 +236,10 @@ def render_scene(f_tex: str, a_tex: str, b_tex: str) -> None:
     # a_tex = input("Ingrese límite inferior: ")
     # b_tex = input("Ingrese límite superior: ")
 
+    # Probar que los TeXes son válidos
+    for tex, name in [(f_tex, "f_tex"), (a_tex, "a_tex"), (b_tex, "b_tex")]:
+        MathTex(tex)
+
     cleaned_texes = [f_tex, a_tex, b_tex]
     for i in range(3):
         for symbols, replacement in [
