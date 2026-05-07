@@ -148,8 +148,25 @@ class ParametricCurveScene(ThreeDScene):
         max_point = np.max(f_values, axis=0)
         mid_point = 0.5 * (min_point + max_point)
         box_span = 1.5 * max(max_point - min_point)
+        step = 1
+        while step < 0.2 * box_span:
+            if 2 * step > 0.2 * box_span:
+                step *= 2
+                break
+            if 5 * step > 0.2 * box_span:
+                step *= 5
+                break
+            step *= 10
+        while step > 0.5 * box_span:
+            if step / 2 < 0.5 * box_span:
+                step /= 2
+                break
+            if step / 5 < 0.5 * box_span:
+                step /= 5
+                break
+            step /= 10.0
         ranges = [
-            (mid_coord - 0.5 * box_span, mid_coord + 0.5 * box_span)
+            (mid_coord - 0.5 * box_span, mid_coord + 0.5 * box_span, step)
             for mid_coord in mid_point
         ]
         axes_config = dict(x_range=ranges[0], x_length=6, y_range=ranges[1], y_length=6)
@@ -261,7 +278,7 @@ def render_scene(f_tex: str, a_tex: str, b_tex: str) -> None:
 
 if __name__ == "__main__":
     render_scene(
-        r"\cos(t), \sin(t), \frac{t}{2\pi}",
+        r"0.5\cos(t), 0.5\sin(t)",
         r"0",
-        r"3\pi",
+        r"2\pi",
     )
