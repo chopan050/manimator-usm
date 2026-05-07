@@ -157,30 +157,55 @@ class ParametricCurveScene(ThreeDScene):
         num_curves_per_submobject = 8
         t_values = np.linspace(self.a, self.b, num_curves_per_submobject * self.num_curve_mobjects + 1)
         f_values = np.array([self.f(t) for t in t_values])
-        min_point = np.min(f_values, axis=0)
-        max_point = np.max(f_values, axis=0)
-        mid_point = 0.5 * (min_point + max_point)
-        box_span = 1.5 * max(max_point - min_point)
+
+        curve_min_point = np.min(f_values, axis=0)
+        curve_max_point = np.max(f_values, axis=0)
+        curve_max_diff = max(curve_max_point - curve_min_point)
+
+        # Calcular step
         step = 1
-        while step < 0.2 * box_span:
-            if 2 * step > 0.2 * box_span:
+        while step < 0.2 * curve_max_diff:
+            if 2 * step > 0.2 * curve_max_diff:
                 step *= 2
                 break
-            if 5 * step > 0.2 * box_span:
+            if 5 * step > 0.2 * curve_max_diff:
                 step *= 5
                 break
             step *= 10
-        while step > 0.5 * box_span:
-            if step / 2 < 0.5 * box_span:
+        while step > 0.5 * curve_max_diff:
+            if step / 2 < 0.5 * curve_max_diff:
                 step /= 2
                 break
-            if step / 5 < 0.5 * box_span:
+            if step / 5 < 0.5 * curve_max_diff:
                 step /= 5
                 break
             step /= 10.0
+
+        # Si hay un 0 cercano a los mínimos o máximos:
+        box_span = 1.3 * curve_max_diff
+        curve_mid_point = 0.5 * (curve_min_point + curve_max_point)
+        box_min_point = curve_mid_point - 0.5 * box_span
+        box_max_point = curve_mid_point + 0.5 * box_span
+        for i in range(len(curve_min_point)):
+            coords_are_set = False
+            if curve_min_point[i] >= 0.0 and box_min_point[i] <= 0.0:
+                box_min_point[i] = 0.0
+                box_max_point[i] = box_span
+            if curve_max_point[i] <= 0.0 and box_max_point[i] >= 0.0:
+                box_min_point[i] = -box_span
+                box_max_point[i] = 0.0
+
+            # Si son del mismo signo:
+            if box_min_point[i] > 0.0 and box_max_point[i] > 0.0:
+                box_min_point[i] = round(box_min_point[i] / step) * step
+                box_max_point[i] = box_min_point[i] + box_span
+            if box_min_point[i] < 0.0 and box_max_point[i] < 0.0:
+                box_max_point[i] = round(box_max_point[i] / step) * step
+                box_min_point[i] = box_max_point[i] - box_span
+
         ranges = [
-            (mid_coord - 0.5 * box_span, mid_coord + 0.5 * box_span, step)
-            for mid_coord in mid_point
+            (min_coord, max_coord, step)
+            for min_coord, max_coord in zip(box_min_point, box_max_point)
         ]
         axes_config = dict(x_range=ranges[0], x_length=6, y_range=ranges[1], y_length=6)
         if self.dim == 2:
@@ -243,12 +268,14 @@ class ParametricCurveScene(ThreeDScene):
             t = t_tracker.get_value()
             start = self.f(t)
             end = start + np.asarray(self.df_dt(t))
-            df_dt_arrow.put_start_and_end_on(axes.c2p(start), axes.c2p(end))
+            df_dt_arrow.become(Arrow(axes.c2p(start), axes.c2p(end), color=YELLOW, buff=0.0))
 
-        df_dt_arrow.add_updater(update_df_dt_arrow)
+        update_df_dt_arrow(df_dt_arrow)
         
         self.play(FadeIn(t_dot_group, f_dot, df_dt_arrow), run_time=0.5)
         self.wait(0.5)
+
+        df_dt_arrow.add_updater(update_df_dt_arrow)
 
         self.play(
             t_tracker.animate.set_value(self.b),
