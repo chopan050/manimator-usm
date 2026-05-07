@@ -36,19 +36,32 @@ class ParametricCurveScene(ThreeDScene):
         # Un "problema" con parse_latex (no siempre es problema) es que no convierte
         # automáticamente las constantes e, pi y tau a sus valores numéricos, sino que
         # las deja como símbolos. A veces es deseado, pero no en este caso.
-        substitutions = {"e": np.e, "pi": PI, "tau": TAU}
+        substitutions = {"pi": PI, "tau": TAU}
 
         # Crear función f y dominio [a, b]
-        f_coord_exprs: list[sympy.Expr] = [parse_latex(tex) for tex in f_coord_texes]
-        f_coord_lambdas = [sympy.lambdify("t", expr.evalf(subs=substitutions)) for expr in f_coord_exprs]
+        f_coord_exprs: list[sympy.Expr] = [
+            parse_latex(tex).subs("e", sympy.E) for tex in f_coord_texes
+        ]
+        f_coord_lambdas = [
+            sympy.lambdify("t", expr.evalf(subs=substitutions)) for expr in f_coord_exprs
+        ]
         self.f = lambda t: [f_coord_lambda(t) for f_coord_lambda in f_coord_lambdas]
         self.a = float(parse_latex(a_tex).evalf(subs=substitutions))
         self.b = float(parse_latex(b_tex).evalf(subs=substitutions))
 
         df_dt_coord_exprs = [sympy.diff(expr, "t") for expr in f_coord_exprs]
-        self.df_dt_tex = r"\left(" + r",\, ".join(sympy.latex(expr) for expr in df_dt_coord_exprs) + r"\right)"
-        df_dt_coord_lambdas = [sympy.lambdify("t", expr.evalf(subs=substitutions)) for expr in df_dt_coord_exprs]
-        self.df_dt = lambda t: [df_dt_coord_lambda(t) for df_dt_coord_lambda in df_dt_coord_lambdas]
+        self.df_dt_tex = (
+            r"\left("
+            + r",\, ".join(sympy.latex(expr) for expr in df_dt_coord_exprs)
+            + r"\right)"
+        )
+        df_dt_coord_lambdas = [
+            sympy.lambdify("t", expr.evalf(subs=substitutions))
+            for expr in df_dt_coord_exprs
+        ]
+        self.df_dt = lambda t: [
+            df_dt_coord_lambda(t) for df_dt_coord_lambda in df_dt_coord_lambdas
+        ]
 
         self.run_time = 8.0
         self.num_curve_mobjects = 5
