@@ -9,7 +9,8 @@ import {
   FieldLabel,
   FieldSet,
 } from "@/components/ui/field";
-import { Check, Loader2 } from "lucide-react";
+import { Check, ExternalLink, Heart, Loader2 } from "lucide-react";
+import { FaGithub } from "react-icons/fa";
 
 const API_URL = "/api";
 
@@ -166,7 +167,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-6">
       <Card className="w-full max-w-3xl shadow-xl rounded-2xl">
         <CardContent className="p-6 space-y-6">
           <h1 className="text-3xl font-bold">
@@ -297,6 +298,66 @@ export default function App() {
           </div>
         </CardContent>
       </Card>
+
+      <footer className="w-full max-w-3xl mt-10 text-sm text-gray-500">
+        <Card className="rounded-2xl shadow-sm">
+          <CardContent className="p-5 space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              
+              {/* Autor */}
+              <div className="flex items-center gap-4">
+                <img
+                    src="/logo_utfsm.png"
+                    alt="Logo"
+                    className="w-13 h-12"
+                  />
+
+                <div>
+                  <p className="font-semibold text-gray-800">
+                    Francisco Manríquez Novoa
+                  </p>
+
+                  <p className="text-xs text-gray-500">
+                    Desarrollado con React, FastAPI,
+                    Celery y Manim
+                  </p>
+                </div>
+              </div>
+
+              {/* Links */}
+              <div className="flex items-center gap-4">
+                <a
+                  href="https://github.com/chopan050/manimator-usm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 hover:text-black transition"
+                >
+                  <FaGithub size={16} />
+                  GitHub
+                  <ExternalLink size={14} />
+                </a>
+              </div>
+            </div>
+
+            {/* Línea divisoria */}
+            <div className="border-t pt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              
+              <p className="text-xs">
+                © {new Date().getFullYear()} Francisco Manríquez Novoa
+              </p>
+
+              <div className="flex items-center gap-1 text-xs">
+                Hecho con
+                <Heart
+                  size={12}
+                  className="text-red-500 fill-red-500"
+                />
+                usando Manim
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </footer>
     </div>
   );
 }
