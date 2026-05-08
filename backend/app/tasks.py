@@ -7,7 +7,19 @@ celery_app = Celery(
     backend="redis://redis:6379/0"
 )
 
-@celery_app.task
-def render_manim_task(f_tex: str, a_tex: str, b_tex: str) -> str:
-    video_path = render_scene(f_tex, a_tex, b_tex)
-    return video_path
+@celery_app.task(bind=True)
+def render_manim_task(
+    self: Celery, f_tex: str, a_tex: str, b_tex: str, include_tangent: bool
+) -> str:
+    scene_dict = {
+        "draw": True,
+        "tangent": include_tangent,
+    }
+    scene_urls = {key: None for key in scene_dict}
+    for scene_key, render in scene_dict.items():
+        if render:
+            video_path = render_scene(f_tex, a_tex, b_tex, scene_key)
+            scene_urls[scene_key] = video_path
+            self.update_state(state="PROGRESS", meta=scene_urls)
+    
+    return scene_urls

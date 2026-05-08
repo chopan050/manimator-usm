@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "./components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Field,
@@ -8,26 +9,78 @@ import {
   FieldLabel,
   FieldSet,
 } from "@/components/ui/field";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
 const API_URL = "/api";
+
+type VideoKey = "draw" | "tangent";
+
+type VideoUrls = {
+  draw: string | null;
+  tangent: string | null;
+};
 
 export default function App() {
   const [fTex, setFTex] = useState("(\\cos(t), \\sin(t))");
   const [aTex, setATex] = useState("0");
-  const [bTex, setBTex] = useState('2\\pi');
+  const [bTex, setBTex] = useState("2\\pi");
+  const [includeTangent, setIncludeTangent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUrls, setVideoUrls] = useState<VideoUrls>({
+    draw: null,
+    tangent: null,
+  });
+  const [activeTab, setActiveTab] = useState<VideoKey>("draw");
+
+  // Tabs dinámicas dependiendo de las opciones habilitadas
+  const tabs = useMemo(() => {
+    const baseTabs: { key: VideoKey; label: string }[] = [
+      {
+        key: "draw",
+        label: "Curva",
+      },
+    ];
+
+    if (includeTangent) {
+      baseTabs.push({
+        key: "tangent",
+        label: "Tangente",
+      });
+    }
+
+    return baseTabs;
+  }, [includeTangent]);
+
+  // Mantener tab válida
+  useEffect(() => {
+    if (!tabs.find((t) => t.key === activeTab)) {
+      setActiveTab("draw");
+    }
+  }, [tabs, activeTab]);
+
+  const resetVideos = () => {
+    setVideoUrls({
+      draw: null,
+      tangent: null,
+    });
+  };
 
   const render = async () => {
     setLoading(true);
     setError("");
+    resetVideos();
+    setActiveTab("draw");
 
     const res = await fetch(`${API_URL}/render`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ f_tex: fTex, a_tex: aTex, b_tex: bTex }),
+      body: JSON.stringify({
+        f_tex: fTex,
+        a_tex: aTex,
+        b_tex: bTex,
+        include_tangent: includeTangent,
+      }),
     });
 
     const data = await res.json();
@@ -41,9 +94,29 @@ export default function App() {
 
       setError("");
 
+      const getNewVideoUrls = (data: any) => {
+        const newVideoUrls: VideoUrls = {
+          draw: null,
+          tangent: null,
+        };
+
+        for (const key in data.video_urls) {
+          const videoUrl = data.video_urls[key];
+          if (videoUrl !== null) {
+            newVideoUrls[key as VideoKey] = `${API_URL}${videoUrl}`;
+          }
+        }
+
+        return newVideoUrls;
+      }
+
+      if (data.status === "progress") {
+        setVideoUrls(getNewVideoUrls(data));
+      }
+
       if (data.status === "done") {
         clearInterval(interval);
-        setVideoUrl(`${API_URL}${data.video_url}`);
+        setVideoUrls(getNewVideoUrls(data));
         setLoading(false);
       }
 
@@ -55,34 +128,117 @@ export default function App() {
     }, 2000);
   };
 
+  const renderVideoPanel = () => {
+    const currentVideo = videoUrls[activeTab];
+
+    // Loader mientras se genera
+    if (loading && !currentVideo) {
+      return (
+        <div className="w-full aspect-video rounded-xl border bg-gray-50 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="animate-spin text-gray-500" size={36} />
+
+          <p className="text-sm text-gray-500">
+            Generando video...
+          </p>
+        </div>
+      );
+    }
+
+    // Video listo
+    if (currentVideo) {
+      return (
+        <video
+          src={currentVideo}
+          controls
+          className="w-full rounded-xl border"
+        />
+      );
+    }
+
+    // Estado vacío
+    return (
+      <div className="w-full aspect-video rounded-xl border bg-gray-50 flex items-center justify-center">
+        <p className="text-sm text-gray-400">
+          Aún no hay video disponible
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <Card className="w-full max-w-2xl shadow-xl rounded-2xl">
-        <CardContent className="p-6 space-y-4">
-          <h1 className="text-2xl font-bold">Renderizador de curvas paramétricas</h1>
+      <Card className="w-full max-w-3xl shadow-xl rounded-2xl">
+        <CardContent className="p-6 space-y-6">
+          <h1 className="text-3xl font-bold">
+            Renderizador de curvas paramétricas
+          </h1>
 
           <FieldSet>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="fTex">Curva paramétrica f(t)</FieldLabel>
-                <Input name="fTex" value={fTex} onChange={(e: any) => setFTex(e.target.value)} placeholder="Curva en LaTeX" />
+                <FieldLabel htmlFor="fTex">
+                  Curva paramétrica f(t)
+                </FieldLabel>
+
+                <Input
+                  id="fTex"
+                  name="fTex"
+                  value={fTex}
+                  onChange={(e: any) => setFTex(e.target.value)}
+                  placeholder="Curva en LaTeX"
+                />
               </Field>
 
               <div className="grid grid-cols-2 gap-4">
                 <Field>
-                  <FieldLabel htmlFor="aTex">Límite inferior a</FieldLabel>
-                  <Input name="aTex" value={aTex} onChange={(e: any) => setATex(e.target.value)} placeholder="Límite inferior" />
+                  <FieldLabel htmlFor="aTex">
+                    Límite inferior a
+                  </FieldLabel>
+
+                  <Input
+                    id="aTex"
+                    name="aTex"
+                    value={aTex}
+                    onChange={(e: any) => setATex(e.target.value)}
+                    placeholder="Límite inferior"
+                  />
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="bTex">Límite superior b</FieldLabel>
-                  <Input name="bTex" value={bTex} onChange={(e: any) => setBTex(e.target.value)} placeholder="Límite superior" />
+                  <FieldLabel htmlFor="bTex">
+                    Límite superior b
+                  </FieldLabel>
+
+                  <Input
+                    id="bTex"
+                    name="bTex"
+                    value={bTex}
+                    onChange={(e: any) => setBTex(e.target.value)}
+                    placeholder="Límite superior"
+                  />
                 </Field>
               </div>
+
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="includeTangent"
+                  name="includeTangent"
+                  checked={includeTangent}
+                  onCheckedChange={setIncludeTangent as any}
+                />
+
+                <FieldLabel htmlFor="includeTangent">
+                  Incluir derivada y vector tangente
+                </FieldLabel>
+              </Field>
             </FieldGroup>
           </FieldSet>
 
-          <Button onClick={render} disabled={loading} className="w-full blue">
+          <Button
+            onClick={render}
+            disabled={loading}
+            className="w-full"
+          >
             {loading ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="animate-spin" size={16} />
@@ -94,16 +250,51 @@ export default function App() {
           </Button>
 
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-red-600">
+              {error}
+            </p>
           )}
 
-          {videoUrl && (
-            <video
-              src={videoUrl}
-              controls
-              className="w-full rounded-xl border"
-            />
-          )}
+          {/* Tabs */}
+          <div className="space-y-4">
+            <div className="flex gap-2 border-b">
+              {tabs.map((tab) => {
+                const isReady = !!videoUrls[tab.key];
+
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition flex items-center gap-2
+                      ${
+                        activeTab === tab.key
+                          ? "border-black text-black"
+                          : "border-transparent text-gray-500 hover:text-black"
+                      }
+                    `}
+                  >
+                    {tab.label}
+
+                    {!isReady && loading && (
+                      <Loader2
+                        className="animate-spin"
+                        size={14}
+                      />
+                    )}
+
+                    {isReady && (
+                      <Check
+                        size={14}
+                        className="text-green-600"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {renderVideoPanel()}
+          </div>
         </CardContent>
       </Card>
     </div>

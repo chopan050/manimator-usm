@@ -22,7 +22,7 @@ app.mount("/videos", StaticFiles(directory="/manim/media/videos/720p30"), name="
 
 @app.post("/render")
 def render(req: RenderRequest):
-    task = render_manim_task.delay(req.f_tex, req.a_tex, req.b_tex)
+    task = render_manim_task.delay(req.f_tex, req.a_tex, req.b_tex, req.include_tangent)
     return {"task_id": task.id}
 
 @app.get("/status/{task_id}")
@@ -32,7 +32,9 @@ def get_status(task_id: str):
     if result.state == "PENDING":
         return {"status": "pending"}
     elif result.state == "SUCCESS":
-        return {"status": "done", "video_url": result.result}
+        return {"status": "done", "video_urls": result.result}
+    elif result.state == "PROGRESS":
+        return {"status": "progress", "video_urls": result.result}
     elif result.state == "FAILURE":
         return {"status": "error", "error": str(result.result)}
     else:
