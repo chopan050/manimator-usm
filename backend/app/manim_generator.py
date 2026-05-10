@@ -10,8 +10,18 @@ Dot.set_default(num_components=4)
 
 
 class BaseCurveScene(ThreeDScene):
-    def __init__(self, f_tex: str, a_tex: str, b_tex: str, *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        f_tex: str,
+        a_tex: str,
+        b_tex: str,
+        scene_config: dict[str, Any],
+        *args: Any,
+        **kwargs: Any,
+    ):
         super().__init__(*args, **kwargs)
+
+        self.scene_config = scene_config
 
         # Parsear f_tex
         f_tex = f_tex.strip()
@@ -135,52 +145,55 @@ class BaseCurveScene(ThreeDScene):
 
         curve_min_point = np.min(f_values, axis=0)
         curve_max_point = np.max(f_values, axis=0)
-        curve_max_diff = max(curve_max_point - curve_min_point)
+        curve_diffs = curve_max_point - curve_min_point
+        if self.scene_config["preserve_proportions"]:
+            curve_diffs[:] = max(curve_diffs)
 
-        # Calcular step
-        step = 1
-        while step < 0.2 * curve_max_diff:
-            if 2 * step > 0.2 * curve_max_diff:
-                step *= 2
-                break
-            if 5 * step > 0.2 * curve_max_diff:
-                step *= 5
-                break
-            step *= 10
-        while step > 0.5 * curve_max_diff:
-            if step / 2 < 0.5 * curve_max_diff:
-                step /= 2
-                break
-            if step / 5 < 0.5 * curve_max_diff:
-                step /= 5
-                break
-            step /= 10.0
+        # Calcular steps
+        steps = np.ones_like(curve_min_point)
+        for i in range(len(steps)):
+            while steps[i] < 0.2 * curve_diffs[i]:
+                if 2 * steps[i] > 0.2 * curve_diffs[i]:
+                    steps[i] *= 2
+                    break
+                if 5 * steps[i] > 0.2 * curve_diffs[i]:
+                    steps[i] *= 5
+                    break
+                steps[i] *= 10
+            while steps[i] > 0.5 * curve_diffs[i]:
+                if steps[i] / 2 < 0.5 * curve_diffs[i]:
+                    steps[i] /= 2
+                    break
+                if steps[i] / 5 < 0.5 * curve_diffs[i]:
+                    steps[i] /= 5
+                    break
+                steps[i] /= 10.0
 
         # Si hay un 0 cercano a los mínimos o máximos:
-        box_span = 1.3 * curve_max_diff
+        box_spans = 1.3 * curve_diffs
         curve_mid_point = 0.5 * (curve_min_point + curve_max_point)
-        box_min_point = curve_mid_point - 0.5 * box_span
-        box_max_point = curve_mid_point + 0.5 * box_span
+        box_min_point = curve_mid_point - 0.5 * box_spans
+        box_max_point = curve_mid_point + 0.5 * box_spans
         for i in range(len(curve_min_point)):
             coords_are_set = False
             if curve_min_point[i] >= 0.0 and box_min_point[i] <= 0.0:
                 box_min_point[i] = 0.0
-                box_max_point[i] = box_span
+                box_max_point[i] = box_spans[i]
             if curve_max_point[i] <= 0.0 and box_max_point[i] >= 0.0:
-                box_min_point[i] = -box_span
+                box_min_point[i] = -box_spans[i]
                 box_max_point[i] = 0.0
 
             # Si son del mismo signo:
             if box_min_point[i] > 0.0 and box_max_point[i] > 0.0:
-                box_min_point[i] = round(box_min_point[i] / step) * step
-                box_max_point[i] = box_min_point[i] + box_span
+                box_min_point[i] = round(box_min_point[i] / steps[i]) * steps[i]
+                box_max_point[i] = box_min_point[i] + box_spans[i]
             if box_min_point[i] < 0.0 and box_max_point[i] < 0.0:
-                box_max_point[i] = round(box_max_point[i] / step) * step
-                box_min_point[i] = box_max_point[i] - box_span
+                box_max_point[i] = round(box_max_point[i] / steps[i]) * steps[i]
+                box_min_point[i] = box_max_point[i] - box_spans[i]
 
         ranges = [
             (min_coord, max_coord, step)
-            for min_coord, max_coord in zip(box_min_point, box_max_point)
+            for min_coord, max_coord, step in zip(box_min_point, box_max_point, steps)
         ]
         axes_config = dict(x_range=ranges[0], x_length=6, y_range=ranges[1], y_length=6)
         if self.dim == 2:
@@ -296,9 +309,17 @@ def generate_filename_prefix(f_tex: str, a_tex: str, b_tex: str) -> str:
     
     return f"curve_{cleaned_texes[0]}_[{cleaned_texes[1]},{cleaned_texes[2]}]"
 
-def render_scene(f_tex: str, a_tex: str, b_tex: str, scene_key: str) -> str:
+def render_scene(
+    f_tex: str,
+    a_tex: str,
+    b_tex: str,
+    scene_key: str,
+    scene_config: dict[str, Any],
+) -> str:
     output_filename_prefix = generate_filename_prefix(f_tex, a_tex, b_tex)
     output_filename = f"{output_filename_prefix}_{scene_key}"
+    if scene_config["preserve_proportions"]:
+        output_filename += "_preserveproportions"
     scene_class = {
         "draw": DrawCurveScene,
         "tangent": CurveTangentScene,
@@ -306,15 +327,16 @@ def render_scene(f_tex: str, a_tex: str, b_tex: str, scene_key: str) -> str:
 
     if not Path(f"/manim/media/videos/720p30/{output_filename}.mp4").exists():
         with tempconfig({"quality": "medium_quality", "output_file": output_filename}):
-            scene_class(f_tex, a_tex, b_tex).render()
+            scene_class(f_tex, a_tex, b_tex, scene_config).render()
 
     return f"/videos/{output_filename}.mp4"
 
 
 if __name__ == "__main__":
     render_scene(
-        r"\cos(t), \sin(t), \frac{t}{2\pi}",
+        r"\cos(t), \sin(t), e^t",
         r"0",
         r"2\pi",
-        "draw",
+        "tangent",
+        {"preserve_proportions": False}
     )

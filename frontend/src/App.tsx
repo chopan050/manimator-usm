@@ -26,6 +26,7 @@ export default function App() {
   const [aTex, setATex] = useState("0");
   const [bTex, setBTex] = useState("2\\pi");
   const [includeTangent, setIncludeTangent] = useState(false);
+  const [sceneConfig, setSceneConfig] = useState({ "preserve_proportions": true });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [videoUrls, setVideoUrls] = useState<VideoUrls>({
@@ -81,6 +82,7 @@ export default function App() {
         a_tex: aTex,
         b_tex: bTex,
         include_tangent: includeTangent,
+        scene_config: sceneConfig,
       }),
     });
 
@@ -174,6 +176,7 @@ export default function App() {
             Renderizador de curvas paramétricas
           </h1>
 
+          {/* Formulario */}
           <FieldSet>
             <FieldGroup>
               <Field>
@@ -222,12 +225,23 @@ export default function App() {
 
               <Field orientation="horizontal">
                 <Checkbox
+                  id="preserveProportions"
+                  name="preserveProportions"
+                  checked={sceneConfig.preserve_proportions}
+                  onCheckedChange={value => setSceneConfig({ ...sceneConfig, preserve_proportions: !!value })}
+                />
+                <FieldLabel htmlFor="preserveProportions">
+                  Preservar proporciones de curva (ancho, largo, alto)
+                </FieldLabel>
+              </Field>
+
+              <Field orientation="horizontal">
+                <Checkbox
                   id="includeTangent"
                   name="includeTangent"
                   checked={includeTangent}
-                  onCheckedChange={setIncludeTangent as any}
+                  onCheckedChange={value => setIncludeTangent(!!value)}
                 />
-
                 <FieldLabel htmlFor="includeTangent">
                   Incluir derivada y vector tangente
                 </FieldLabel>
