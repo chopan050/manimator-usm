@@ -11,10 +11,59 @@ import {
 } from "@/components/ui/field";
 import { Check, ExternalLink, Heart, Loader2 } from "lucide-react";
 import { FaGithub } from "react-icons/fa";
+import { Es, Gb } from "react-flag-icons";
 
 const API_URL = "/api";
 
+const translations = {
+  es: {
+    title: "Renderizador de curvas paramétricas",
+    curveLabel: "Curva paramétrica f(t)",
+    curvePlaceholder: "Curva en LaTeX",
+    lowerBoundLabel: "Límite inferior a",
+    upperBoundLabel: "Límite superior b",
+    preserveProportions: "Preservar proporciones de curva (ancho, largo, alto)",
+    includeTangent: "Incluir derivada, recta tangente y vector velocidad",
+    render: "Renderizar",
+    rendering: "Renderizando...",
+    generatingVideo: "Generando video...",
+    noVideo: "Aún no hay video disponible",
+    drawTab: "Curva",
+    tangentTab: "Tangente",
+    github: "GitHub",
+    builtWith: "Desarrollado con React, FastAPI, Celery y Manim",
+    madeWith: "Hecho con",
+    inManim: "en Manim",
+    language: "Español",
+    flag: <Es />
+  },
+
+  en: {
+    title: "Parametric Curve Renderer",
+    curveLabel: "Parametric curve f(t)",
+    curvePlaceholder: "Curva en LaTeX",
+    lowerBoundLabel: "Lower bound a",
+    upperBoundLabel: "Upper bound b",
+    preserveProportions: "Preserve curve proportions (width, length, height)",
+    includeTangent: "Include derivative, tangent line and velocity vector",
+    render: "Render",
+    rendering: "Rendering...",
+    generatingVideo: "Generating video...",
+    noVideo: "No video available yet",
+    drawTab: "Curve",
+    tangentTab: "Tangent",
+    github: "GitHub",
+    builtWith: "Built with React, FastAPI, Celery and Manim",
+    madeWith: "Made with",
+    inManim: "in Manim",
+    language: "English",
+    flag: <Gb />,
+  },
+};
+
 type VideoKey = "draw" | "tangent";
+
+type Language = "en" | "es";
 
 type VideoUrls = {
   draw: string | null;
@@ -22,6 +71,9 @@ type VideoUrls = {
 };
 
 export default function App() {
+  const [language, setLanguage] = useState<Language>("es");
+  const t = translations[language];
+
   const [fTex, setFTex] = useState("(\\cos(t), \\sin(t))");
   const [aTex, setATex] = useState("0");
   const [bTex, setBTex] = useState("2\\pi");
@@ -40,19 +92,19 @@ export default function App() {
     const baseTabs: { key: VideoKey; label: string }[] = [
       {
         key: "draw",
-        label: "Curva",
+        label: t.drawTab,
       },
     ];
 
     if (includeTangent) {
       baseTabs.push({
         key: "tangent",
-        label: "Tangente",
+        label: t.tangentTab,
       });
     }
 
     return baseTabs;
-  }, [includeTangent]);
+  }, [t, includeTangent]);
 
   // Mantener tab válida
   useEffect(() => {
@@ -141,7 +193,7 @@ export default function App() {
           <Loader2 className="animate-spin text-gray-500" size={36} />
 
           <p className="text-sm text-gray-500">
-            Generando video...
+            {t.generatingVideo}
           </p>
         </div>
       );
@@ -162,7 +214,7 @@ export default function App() {
     return (
       <div className="w-full aspect-video rounded-xl border bg-gray-50 flex items-center justify-center">
         <p className="text-sm text-gray-400">
-          Aún no hay video disponible
+          {t.noVideo}
         </p>
       </div>
     );
@@ -172,16 +224,28 @@ export default function App() {
     <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-6">
       <Card className="w-full max-w-3xl shadow-xl rounded-2xl">
         <CardContent className="p-6 space-y-6">
-          <h1 className="text-3xl font-bold">
-            Renderizador de curvas paramétricas
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold">
+              {t.title}
+            </h1>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setLanguage(language === "es" ? "en" : "es")
+              }
+            >
+              {t.flag} {t.language}
+            </Button>
+          </div>
 
           {/* Formulario */}
           <FieldSet>
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="fTex">
-                  Curva paramétrica f(t)
+                  {t.curveLabel}
                 </FieldLabel>
 
                 <Input
@@ -189,14 +253,14 @@ export default function App() {
                   name="fTex"
                   value={fTex}
                   onChange={(e: any) => setFTex(e.target.value)}
-                  placeholder="Curva en LaTeX"
+                  placeholder={t.curvePlaceholder}
                 />
               </Field>
 
               <div className="grid grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="aTex">
-                    Límite inferior a
+                    {t.lowerBoundLabel}
                   </FieldLabel>
 
                   <Input
@@ -204,13 +268,13 @@ export default function App() {
                     name="aTex"
                     value={aTex}
                     onChange={(e: any) => setATex(e.target.value)}
-                    placeholder="Límite inferior"
+                    placeholder={t.lowerBoundLabel}
                   />
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="bTex">
-                    Límite superior b
+                    {t.upperBoundLabel}
                   </FieldLabel>
 
                   <Input
@@ -218,7 +282,7 @@ export default function App() {
                     name="bTex"
                     value={bTex}
                     onChange={(e: any) => setBTex(e.target.value)}
-                    placeholder="Límite superior"
+                    placeholder={t.upperBoundLabel}
                   />
                 </Field>
               </div>
@@ -231,7 +295,7 @@ export default function App() {
                   onCheckedChange={value => setSceneConfig({ ...sceneConfig, preserve_proportions: !!value })}
                 />
                 <FieldLabel htmlFor="preserveProportions">
-                  Preservar proporciones de curva (ancho, largo, alto)
+                  {t.preserveProportions}
                 </FieldLabel>
               </Field>
 
@@ -243,7 +307,7 @@ export default function App() {
                   onCheckedChange={value => setIncludeTangent(!!value)}
                 />
                 <FieldLabel htmlFor="includeTangent">
-                  Incluir derivada y vector tangente
+                  {t.includeTangent}
                 </FieldLabel>
               </Field>
             </FieldGroup>
@@ -257,11 +321,9 @@ export default function App() {
             {loading ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="animate-spin" size={16} />
-                Renderizando...
+                {t.rendering}
               </span>
-            ) : (
-              "Renderizar"
-            )}
+            ) : t.render}
           </Button>
 
           {error && (
@@ -332,8 +394,7 @@ export default function App() {
                   </p>
 
                   <p className="text-xs text-gray-500">
-                    Desarrollado con React, FastAPI,
-                    Celery y Manim
+                    {t.builtWith}
                   </p>
                 </div>
               </div>
@@ -361,12 +422,12 @@ export default function App() {
               </p>
 
               <div className="flex items-center gap-1 text-xs">
-                Hecho con
+                {t.madeWith}
                 <Heart
                   size={12}
                   className="text-red-500 fill-red-500"
                 />
-                usando Manim
+                {t.inManim}
               </div>
             </div>
           </CardContent>
